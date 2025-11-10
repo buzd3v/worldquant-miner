@@ -1,10 +1,36 @@
 version: '3.8'
 
 services:
+  orchestrator-gpu:
+    build: .
+    container_name: alpha-orchestrator-gpu
+    runtime: nvidia
+    ports:
+      - "11434:11434"   # Ollama API port
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+      - ROLE=orchestrator
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_GPU_LAYERS=20
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_GPU_MEMORY_UTILIZATION=0.8
+    volumes:
+      - ./credential.txt:/app/credential.txt:ro
+      - ./results:/app/results
+      - ./logs:/app/logs
+      - .:/app
+      - ollama_data:/root/.ollama
+    command: ["bash", "start.sh"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
   naive-ollma:
     build: .
     container_name: naive-ollma-gpu
-    runtime: nvidia
     ports:
       - "11434:11434"  # Ollama API port
     volumes:
@@ -26,11 +52,6 @@ services:
       - OLLAMA_GPU_MEMORY_FRACTION=0.8
     deploy:
       resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
         limits:
           memory: 12G
           cpus: '4.0'
@@ -38,6 +59,8 @@ services:
     command: ["python", "alpha_orchestrator.py", "--mode", "continuous", "--batch-size", "2", "--max-concurrent", "2"]
     networks:
       - naive-ollma-network
+    depends_on:
+      - orchestrator-gpu
 
   # Optional: Add a simple web interface for monitoring
   ollama-webui:
@@ -99,6 +122,7 @@ services:
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+    entrypoint: ""
     command: ["python", "web_dashboard.py"]
     depends_on:
       - naive-ollma
