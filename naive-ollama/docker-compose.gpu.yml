@@ -1,35 +1,11 @@
 version: '3.8'
 
 services:
-  orchestrator-gpu:
-    build: .
-    container_name: alpha-orchestrator-gpu
-    runtime: nvidia
-    ports:
-      - "11434:11434"   # Ollama API port
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - CUDA_VISIBLE_DEVICES=0
-      - ROLE=orchestrator
-      - PYTHONUNBUFFERED=1
-      - OLLAMA_GPU_LAYERS=20
-      - OLLAMA_NUM_PARALLEL=1
-      - OLLAMA_GPU_MEMORY_UTILIZATION=0.8
-    volumes:
-      - ./credential.txt:/app/credential.txt:ro
-      - ./results:/app/results
-      - ./logs:/app/logs
-      - .:/app
-      - ollama_data:/root/.ollama
-    command: ["bash", "start.sh"]
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
   naive-ollma:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.ollama
+      network: host
     container_name: naive-ollma-gpu
     ports:
       - "11434:11434"  # Ollama API port
@@ -39,6 +15,9 @@ services:
       - ./logs:/app/logs  # Mount logs directory
       - .:/app  # Mount current directory for hopeful_alphas.json sharing
       - ollama_data:/root/.ollama  # Persist Ollama models
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - OLLAMA_HOST=0.0.0.0
       - OLLAMA_ORIGINS=*
@@ -50,8 +29,14 @@ services:
       - OLLAMA_NUM_PARALLEL=1
       - OLLAMA_GPU_MEMORY_UTILIZATION=0.8
       - OLLAMA_GPU_MEMORY_FRACTION=0.8
+      - ROLE=orchestrator
     deploy:
       resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
         limits:
           memory: 12G
           cpus: '4.0'
@@ -59,15 +44,16 @@ services:
     command: ["python", "alpha_orchestrator.py", "--mode", "continuous", "--batch-size", "2", "--max-concurrent", "2"]
     networks:
       - naive-ollma-network
-    depends_on:
-      - orchestrator-gpu
 
   # Optional: Add a simple web interface for monitoring
   ollama-webui:
     image: ghcr.io/ollama-webui/ollama-webui:main
+    dns: 8.8.8.8
     container_name: ollama-webui-gpu
     ports:
       - "3000:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - OLLAMA_API_BASE_URL=http://naive-ollma-gpu:11434/api
     depends_on:
@@ -78,7 +64,9 @@ services:
       
   # Machine Miner Service
   machine-miner:
-    build: .
+    build:
+      context: .
+      network: host
     container_name: machine-miner-gpu
     runtime: nvidia
     volumes:
@@ -86,6 +74,9 @@ services:
       - ./results:/app/results
       - ./logs:/app/logs
       - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONUNBUFFERED=1
       - NVIDIA_VISIBLE_DEVICES=all
@@ -110,7 +101,9 @@ services:
 
   # Alpha Generator Dashboard
   alpha-dashboard:
-    build: .
+    build:
+      context: .
+      network: host
     container_name: alpha-dashboard-gpu
     ports:
       - "5000:5000"
@@ -119,6 +112,9 @@ services:
       - ./logs:/app/logs
       - ./credential.txt:/app/credential.txt:ro
       - .:/app  # Mount current directory for hopeful_alphas.json sharing
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
@@ -129,6 +125,13 @@ services:
     restart: unless-stopped
     networks:
       - naive-ollma-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   ollama_data:

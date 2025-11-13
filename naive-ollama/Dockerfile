@@ -25,17 +25,14 @@ RUN ln -s /usr/bin/python3.8 /usr/bin/python
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
 
-# Install Ollama
-RUN curl -fsSL https://ollama.ai/install.sh | sh
-
-# Copy application code
 COPY . .
 
 # Copy the start scripts and make them executable
 COPY start.sh /app/start.sh
 COPY start_ollama.sh /app/start_ollama.sh
+RUN sed -i 's/\r$//' /app/start.sh /app/start_ollama.sh
 RUN chmod +x /app/start.sh /app/start_ollama.sh
 
 # Expose Ollama port

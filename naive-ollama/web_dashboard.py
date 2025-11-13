@@ -64,7 +64,7 @@ class AlphaDashboard:
     def get_ollama_status(self) -> Dict:
         """Get Ollama service status."""
         try:
-            response = requests.get("http://localhost:11434/api/tags", timeout=5)
+            response = requests.get("http://host.docker.internal:11434/api/tags", timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 models = data.get("models", [])
@@ -90,6 +90,9 @@ class AlphaDashboard:
         
         try:
             # Try to get Docker container logs
+            # WARNING: Adding 'sudo' directly to the command can have security implications.
+            # A more secure approach is to add the user running this application to the 'docker' group:
+            # sudo usermod -aG docker $USER && newgrp docker
             result = subprocess.run([
                 "docker", "logs", "--tail", "50", "naive-ollma-gpu"
             ], capture_output=True, text=True, timeout=10)
@@ -163,6 +166,9 @@ class AlphaDashboard:
         
         try:
             # Get logs from Docker container
+            # WARNING: Adding 'sudo' directly to the command can have security implications.
+            # A more secure approach is to add the user running this application to the 'docker' group:
+            # sudo usermod -aG docker $USER && newgrp docker
             result = subprocess.run([
                 "docker", "logs", "--tail", "20", "naive-ollma-gpu"
             ], capture_output=True, text=True, timeout=10)
@@ -294,6 +300,9 @@ class AlphaDashboard:
         logs = []
         try:
             # Get logs from Docker container
+            # WARNING: Adding 'sudo' directly to the command can have security implications.
+            # A more secure approach is to add the user running this application to the 'docker' group:
+            # sudo usermod -aG docker $USER && newgrp docker
             result = subprocess.run([
                 "docker", "logs", "--tail", str(lines), "naive-ollma-gpu"
             ], capture_output=True, text=True, timeout=10)
@@ -324,6 +333,9 @@ class AlphaDashboard:
         logs = []
         try:
             # Get logs from Docker container and filter for alpha generator content
+            # WARNING: Adding 'sudo' directly to the command can have security implications.
+            # A more secure approach is to add the user running this application to the 'docker' group:
+            # sudo usermod -aG docker $USER && newgrp docker
             result = subprocess.run([
                 "docker", "logs", "--tail", str(lines * 2), "naive-ollma-gpu"
             ], capture_output=True, text=True, timeout=10)
