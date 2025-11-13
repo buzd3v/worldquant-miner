@@ -36,6 +36,10 @@ docker-compose -f docker-compose.gpu.yml up -d
        \/                         \/   |__|          \/     \/             \/        \/     \/       
 ```
 
+sudo chmod 666 /var/run/docker.sock
+sudo chmod 666 /var/run/docker.sock
+sudo chmod 666 /var/run/docker.sock
+sudo chmod 666 /var/run/docker.sock
 
 
 Discord: https://discord.gg/3B2TmHQw
